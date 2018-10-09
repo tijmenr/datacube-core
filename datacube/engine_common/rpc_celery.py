@@ -1,5 +1,6 @@
 from __future__ import absolute_import
 
+import ssl
 from time import sleep
 from celery import Celery
 
@@ -55,15 +56,19 @@ def launch_ae_worker(local_config):
     store_config = local_config.redis_celery_config
     # initialise_engines(local_config)
     from multiprocessing import Process
-    process = Process(target=launch_worker_thread, args=(store_config['url'],))
+    process = Process(target=launch_worker_thread, args=(store_config['url'], store_config['ssl']))
     process.start()
     return process
 
 
-def launch_worker_thread(url):
+def launch_worker_thread(url, use_ssl):
     """Only used for pytests"""
     app.conf.update(result_backend=url,
                     broker_url=url)
+    if use_ssl:
+        app.conf.update(
+            broker_use_ssl={'ssl_cert_reqs': ssl.CERT_NONE},
+            redis_backend_use_ssl={'ssl_cert_reqs': ssl.CERT_NONE})
     argv = ['worker', '-A', 'datacube.engine_common.rpc_celery', '-l', 'INFO', '--autoscale=3,0']
     app.worker_main(argv)
 
@@ -83,6 +88,11 @@ remote functions during for the analytics engine.'''
         # global app
         app.conf.update(result_backend=dc_config.redis_celery_config['url'],
                         broker_url=dc_config.redis_celery_config['url'])
+
+        if dc_config.redis_celery_config['ssl']:
+            app.conf.update(
+                broker_use_ssl={'ssl_cert_reqs': ssl.CERT_NONE},
+                redis_backend_use_ssl={'ssl_cert_reqs': ssl.CERT_NONE})
 
     def _run_python_function_base(self, url):
         '''Run the function using celery.

@@ -38,10 +38,12 @@ db_connection_timeout: 60
 redis.host: 127.0.0.1
 redis.port: 6379
 redis.db: 0
+redis.ssl: False
 
 redis_celery.host: 127.0.0.1
 redis_celery.port: 6379
 redis_celery.db: 1
+redis_celery.ssl: False
 
 execution_engine.user_bucket: eetest2-user
 execution_engine.result_bucket: eetest2-system
@@ -147,7 +149,8 @@ class LocalConfig(object):
             'host': self.get('redis.host', None),
             'port': int(self.get('redis.port', None)),
             'db': int(self.get('redis.db', None)),
-            'password': self.get('redis.password', None)
+            'password': self.get('redis.password', None),
+            'ssl': self.get('redis.ssl') == 'True'
         }
 
     @property
@@ -156,6 +159,7 @@ class LocalConfig(object):
         port = int(self.get('redis_celery.port', None))
         db = int(self.get('redis_celery.db', None))
         password = self.get('redis_celery.password', None)
+        ssl = self.get('redis_celery.ssl') == 'True'
         url = 'redis://{}{}:{}/{}'.format(
             ':{}@'.format(password) if password else '',
             host, port, db)
@@ -164,7 +168,8 @@ class LocalConfig(object):
             'port': port,
             'db': db,
             'password': password,
-            'url': url
+            'url': url,
+            'ssl': ssl
         }
 
     @property

@@ -4,7 +4,7 @@ submitting jobs in a cluster and receiving job result objects in return.'''
 from __future__ import absolute_import
 
 import logging
-from time import monotonic
+from time import monotonic, sleep
 from pathlib import Path
 from uuid import uuid4
 
@@ -86,8 +86,16 @@ class AnalyticsClient(object):
                                      bucket=self._user_bucket, ids=[unique_id])
         url = file_transfer.store_payload(payload)
         try:
-            analysis = self._rpc._run_python_function_base(url)
-            jro = JobResult(*analysis, client=self, paths=paths, env=env)
+            jro_url = self._rpc._run_python_function_base(url)
+            # Fetch JRO from S3
+            file_transfer2 = FileTransfer(url=jro_url)
+            for jro_attempt in range(60*10):
+                jro_data = file_transfer2.fetch_payload()
+                if jro_data:
+                    break
+                self.logger.warning('JRO data not yet in S3...')
+                sleep(10)
+            jro = JobResult(*jro_data, client=self, paths=paths, env=env)
             jro.checkForUpdate(check_period, start_time)
             self._urls[unique_id] = url
             return jro

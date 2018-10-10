@@ -189,8 +189,11 @@ class FileTransfer(object):
     def fetch_payload(self, unpack=True):
         s3io = S3IO(self.use_s3, str(self.s3_dir))
         payload_key = '/'.join([str(id) for id in self.ids] + [self.PAYLOAD])
-        payload = loads(s3io.get_bytes(self.bucket, payload_key))
-        return self.unpack(payload) if unpack else payload
+        if s3io.object_exists(self.bucket, payload_key):
+            payload = loads(s3io.get_bytes(self.bucket, payload_key))
+            return self.unpack(payload) if unpack else payload
+        return None
+
 
     def store_payload(self, payload, sub_id=None):
         key = '{}{}/{}'.format(self.base_key, '/{}'.format(sub_id) if sub_id else '', self.PAYLOAD)

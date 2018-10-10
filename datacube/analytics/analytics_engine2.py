@@ -82,7 +82,11 @@ class AnalyticsEngineV2(Worker):
 
         # Run the base job
         self.job_starts(decomposed['base'])
-        return (self._get_jro_params(decomposed['base']), decomposed)
+
+        # Store jro params in S3
+        jro = self._get_jro_params(decomposed['base'])
+        jro_url = self._file_transfer.store_payload(jro, sub_id='result')
+        return (jro_url, decomposed)
 
     def _determine_function_type(self, func):
         '''Determine the type of a function.'''

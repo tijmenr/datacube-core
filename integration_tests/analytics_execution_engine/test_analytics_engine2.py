@@ -99,7 +99,8 @@ def _submit(test_name, tmpdir, store_handler, local_config, celery_enabled, base
 
     # Wait a while for the main job to complete
     for tstep in range(85):
-        if jro.status == JobStatuses.COMPLETED:
+        if jro.status in (JobStatuses.WALLTIME_EXCEEDED,
+                          JobStatuses.ERRORED, JobStatuses.COMPLETED):
             break
         sleep(1.0)
     assert jro.status == JobStatuses.COMPLETED, client._store.str_dump()

@@ -168,13 +168,13 @@ def run_python_function_subjob(url):
     return celery_analytics_worker.original_run_python_function_subjob(url)
 
 @app.task
-def monitor_jobs(decomposed, subjob_tasks, params_url):
+def monitor_jobs(monitor_url):
     '''Monitors base job.
 
     This celery task calls the original implementation in the parent
     class.
     '''
-    return celery_analytics_worker.original_monitor_jobs(decomposed, subjob_tasks, params_url)
+    return celery_analytics_worker.original_monitor_jobs(monitor_url)
 
 @app.task
 def get_update(action, item_id, paths=None, env=None):
@@ -210,21 +210,28 @@ class CeleryAnalyticsWorker(AnalyticsWorker):
         '''
         return super().run_python_function_subjob(url)
 
-    def monitor_jobs(self, decomposed, subjob_tasks, params_url):
+    def monitor_jobs(self, monitor_url, kill_subjobs=None):
         '''Monitors base job.
 
         This method calls the original implementation through a celery
-        delayed call.
+        delayed call. Any kill_subjobs param passed is ignored, as a
+        celery-specific callback will be passed to the original
+        monitor eventually (in `original_monitor_jobs`).
         '''
-        return monitor_jobs.delay(decomposed, subjob_tasks, params_url)
+        return monitor_jobs.delay(monitor_url)
 
-    def original_monitor_jobs(self, decomposed, subjob_tasks, params_url):
+    def original_monitor_jobs(self, monitor_url):
         '''Monitors base job.
 
         This method calls the original implementation in the parent
-        class.
+        class, but provides a celery-specific callback to override
+        `kill_subjobs()`.
         '''
-        return super().monitor_jobs(decomposed, subjob_tasks, params_url)
+        def kill_subjobs(subjob_tasks):
+            for job in subjob_tasks:
+                job.revoke(terminate=True)
+
+        return super().monitor_jobs(monitor_url, kill_subjobs)
 
 # A CeleryAnalyticsWorker instance is created to allow inheritance of
 # the base code.

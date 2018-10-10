@@ -11,25 +11,39 @@ from .analytics_engine2 import AnalyticsEngineV2
 from .update_engine2 import UpdateEngineV2
 from .base_job_monitor import BaseJobMonitor
 from datacube.execution.execution_engine2 import ExecutionEngineV2
+from datacube.engine_common.file_transfer import FileTransfer
 
 
 class AnalyticsWorker():
     '''The analytics worker organises the message flows between
     workers. It can be subclassed to use specific RPC calls.'''
 
-    def run_python_function_base(self, params_url): #, run_python_function_subjob, monitor_jobs):
+    def run_python_function_base(self, params_url):
         '''Process the function and data submitted by the user.'''
         analytics_engine = AnalyticsEngineV2('Analytics Engine', params_url)
         if not analytics_engine:
             raise RuntimeError('Analytics engine must be initialised by calling `initialise_engines`')
-        jro, decomposed = analytics_engine.analyse()
+        jro_url, decomposed = analytics_engine.analyse()
 
         subjob_tasks = []
         for url in decomposed['urls']:
             subjob_tasks.append(self.run_python_function_subjob(url))
 
-        monitor_task = self.monitor_jobs(decomposed, subjob_tasks, params_url)
-        return jro
+        monitor_params = {
+            'decomposed': decomposed,
+            'subjob_tasks': subjob_tasks,
+        }
+        payload = {
+            'params_url': 'URL:{}'.format(params_url),
+            'job': monitor_params
+        }
+
+        # TODO: could we avoid creating a new file transfer here?
+        file_transfer = FileTransfer(url=jro_url)
+        monitor_url = file_transfer.store_payload(payload, sub_id='monitor')
+        self.monitor_jobs(monitor_url)
+
+        return jro_url
 
     def run_python_function_subjob(self, url):
         '''Process a subjob, created by the base job.'''
@@ -38,9 +52,14 @@ class AnalyticsWorker():
             raise RuntimeError('Execution engine must be initialised by calling `initialise_engines`')
         execution_engine.execute()
 
-    def monitor_jobs(self, decomposed, subjob_tasks, params_url):
-        '''Monitors base job.'''
-        base_job_monitor = BaseJobMonitor('Base Job Monitor', decomposed, subjob_tasks, params_url)
+    def monitor_jobs(self, monitor_url, kill_subjobs=None):
+        '''Monitors the subjobs.
+
+        An RPC-dependent implementation of the `kill_subjobs()` must
+        be passed as a callback function, to allow to forcibly kill
+        all subjobs.
+        '''
+        base_job_monitor = BaseJobMonitor('Base Job Monitor', monitor_url, kill_subjobs)
         base_job_monitor.monitor_completion()
 
     def get_update(self, action, item_id, paths=None, env=None):

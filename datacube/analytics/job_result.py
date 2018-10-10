@@ -118,12 +118,13 @@ class JobResult(object):
     def checkForUpdate(self, period, start_time):
         """Starts a periodic timer to check and update the JRO
         """
-        if self.job.status == JobStatuses.COMPLETED:
+        status = self.job.status
+        if status == JobStatuses.COMPLETED:
             self.client.update_jro(self, self._paths, self._env)
             self._status = JobStatuses.COMPLETED
             print("Job is Completed")
             print(monotonic() - start_time)
-        elif self.job.status == JobStatuses.WALLTIME_EXCEEDED:
+        elif status == JobStatuses.WALLTIME_EXCEEDED:
             self._status = JobStatuses.WALLTIME_EXCEEDED
             print("Job exceeded walltime")
         else:

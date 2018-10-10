@@ -14,12 +14,21 @@ class BaseJobMonitor(Worker):
     perform monitoring at the proper times.
     """
 
-    def __init__(self, name, decomposed, subjob_tasks, params_url):
-        super(BaseJobMonitor, self).__init__(name, WorkerTypes.MONITOR, params_url)
-        self._decomposed = decomposed
+    def __init__(self, name, url, kill_subjobs):
+        '''Initialise the base job monitor.
+
+        The mayload located at url is used, and expected to be a job
+        type of payload, i.e. include the parameters for this worker
+        under the `job` key. The calling class must provide a callback
+        function to override the `kill_subjobs()` method as it is
+        RPC-dependent.
+        '''
+        super().__init__(name, WorkerTypes.MONITOR, url)
+        self._decomposed = self._job_params['decomposed']
+        self._subjob_tasks = self._job_params['subjob_tasks']
+        self._kill_subjobs = kill_subjobs or self.kill_subjobs
         self._walltime = self._input_params['walltime']
         self._walltime_in_secs = self._walltime_to_sec(self._walltime)
-        self._subjob_tasks = subjob_tasks
         self._start_time = monotonic()
 
     def _walltime_to_sec(self, walltime):
@@ -56,7 +65,7 @@ class BaseJobMonitor(Worker):
 
         if walltime_exceeded:
             self.logger.info('Walltime %s exceeded! Killing all sub-jobs', self._walltime)
-            self.kill_subjobs()
+            self._kill_subjobs(self._subjob_tasks)
             return JobStatuses.WALLTIME_EXCEEDED
 
         return JobStatuses.ERRORED
@@ -70,6 +79,11 @@ class BaseJobMonitor(Worker):
         self.job_finishes(self._decomposed['base'], job_status)
         self.logger.info('Base job monitor completed')
 
-    def kill_subjobs(self):
-        for job in self._subjob_tasks:
-            job.revoke(terminate=True)
+    @staticmethod
+    def kill_subjobs(subjob_tasks):
+        '''Forcibly kill all the subjobs.
+
+        Implementation is RPC-dependent and must be passed as a
+        callback function to the constructor of this monitor.
+        '''
+        raise NotImplementedError('kill_subjobs not implemented')

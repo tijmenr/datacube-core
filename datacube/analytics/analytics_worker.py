@@ -23,10 +23,10 @@ class AnalyticsWorker():
         analytics_engine = AnalyticsEngineV2('Analytics Engine', params_url)
         if not analytics_engine:
             raise RuntimeError('Analytics engine must be initialised by calling `initialise_engines`')
-        jro_url, decomposed = analytics_engine.analyse()
+        jro_url, urls, decomposed = analytics_engine.analyse()
 
         subjob_tasks = []
-        for url in decomposed['urls']:
+        for url in urls:
             subjob_tasks.append(self.run_python_function_subjob(url))
 
         monitor_params = {
@@ -39,8 +39,8 @@ class AnalyticsWorker():
         }
 
         # TODO: could we avoid creating a new file transfer here?
-        file_transfer = FileTransfer(url=jro_url)
-        monitor_url = file_transfer.store_payload(payload, sub_id='monitor')
+        file_transfer = FileTransfer(url=jro_url.replace('/result/', '/monitor/'))
+        monitor_url = file_transfer.store_payload(payload)
         self.monitor_jobs(monitor_url)
 
         return jro_url

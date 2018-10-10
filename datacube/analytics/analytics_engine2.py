@@ -76,7 +76,7 @@ class AnalyticsEngineV2(Worker):
         if data and 'storage_params' in data:
             storage.update(data['storage_params'])
         function_type = self._determine_function_type(function)
-        decomposed = self._decompose(function_type, function, query, storage, user_tasks)
+        decomposed, urls = self._decompose(function_type, function, query, storage, user_tasks)
         if logging.getLevelName(self.logger.getEffectiveLevel()) == 'DEBUG':
             self.logger.debug('Decomposed\n%s', pformat(decomposed, indent=4))
 
@@ -86,7 +86,7 @@ class AnalyticsEngineV2(Worker):
         # Store jro params in S3
         jro = self._get_jro_params(decomposed['base'])
         jro_url = self._file_transfer.store_payload(jro, sub_id='result')
-        return (jro_url, decomposed)
+        return (jro_url, urls, decomposed)
 
     def _determine_function_type(self, func):
         '''Determine the type of a function.'''
@@ -105,11 +105,10 @@ class AnalyticsEngineV2(Worker):
         # todo: reserve key in redis here
         jobs, urls = self._create_jobs(function, data, storage_params, user_tasks)
         base = self._create_base_job(function_type, function, data, storage_params, user_tasks, jobs)
-        return {
+        return ({
             'base': base,
-            'jobs': jobs,
-            'urls': urls
-        }
+            'jobs': jobs
+        }, urls)
 
     def _store_job(self, job, dependent_job_ids=None):
         '''Store a job, its data and dependencies in the store.

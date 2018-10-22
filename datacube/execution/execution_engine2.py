@@ -121,7 +121,10 @@ class ExecutionEngineV2(Worker):
         for filepath in self._file_transfer.output_dir.rglob('*'):
             if filepath.is_file():
                 relpath = str(filepath.relative_to(self._file_transfer.output_dir))
-                output_files[relpath] = filepath.as_uri()
+                # Files should be stored in S3 individually, so it's
+                # up to the client to fetch them or work directly
+                # there.
+                output_files[relpath] = 'to-s3:///{}'.format(relpath)
         return output_files
 
     def execute(self):

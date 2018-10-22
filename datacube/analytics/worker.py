@@ -42,7 +42,8 @@ class Worker(object):
             self._input_params = data
 
         # Initialise datacube
-        if 'paths' in self._input_params and 'env' in self._input_params:
+        if 'paths' in self._input_params and 'env' in self._input_params and \
+           self._input_params['paths'] and self._input_params['env']:
             config = LocalConfig.find(self._input_params['paths'], self._input_params['env'])
         else:
             config = LocalConfig.find()

@@ -159,7 +159,8 @@ class AnalyticsEngineV2(Worker):
             # Store job in S3
             payload = {
                 'params_url': 'URL:{}'.format(self._params_url),
-                'job': job
+                'job': job,
+                'type': 'sub_job'
             }
             urls.append(self._file_transfer.store_payload(payload, sub_id=job['id']))
         return jobs, urls

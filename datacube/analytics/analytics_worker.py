@@ -35,7 +35,8 @@ class AnalyticsWorker():
         }
         payload = {
             'params_url': 'URL:{}'.format(params_url),
-            'job': monitor_params
+            'job': monitor_params,
+            'type': 'monitor_job'
         }
 
         # TODO: could we avoid creating a new file transfer here?

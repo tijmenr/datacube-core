@@ -209,7 +209,7 @@ class FileTransfer(object):
         s3io.put_bytes(self.bucket, s3_key, data, True)
         return s3_key
 
-    def pack(self, data):
+    def pack(self, data, sub_id=None):
         '''Recursively pack data, pulling data from local files.
 
         Any file URL contained in a dictionary is replaced by the
@@ -226,13 +226,24 @@ class FileTransfer(object):
                 self.DATA: self.serialise(data)
             }
         elif isinstance(data, (list, tuple)):
-            packed = [self.pack(val) for val in data]
+            packed = [self.pack(val, sub_id) for val in data]
             return tuple(packed) if isinstance(data, tuple) else packed
         elif isinstance(data, dict):
-            return {key: self.pack(val) for key, val in data.items()}
+            return {key: self.pack(val, sub_id) for key, val in data.items()}
         elif isinstance(data, str):
             parsed = urlparse(data)
-            if parsed.scheme == 'file':
+            if parsed.scheme == 'to-s3':
+                # Store file in s3 individually
+                relpath = parsed.path.lstrip('/')
+                filepath = self.output_dir / relpath
+                with filepath.open('rb') as fh:
+                    contents = fh.read()
+                    key = '{}{}/files/{}'.format(self.base_key, '/{}'.format(sub_id) if sub_id else '',
+                                                 relpath)
+                    s3io = S3IO(self.use_s3, str(self.s3_dir))
+                    s3io.put_bytes(self.bucket, key, contents)
+                    return '{base_url}/{key}'.format(base_url=self.base_url, key=key)
+            elif parsed.scheme == 'file':
                 filepath = Path(parsed.path)
                 with filepath.open('rb') as fh:
                     contents = self.compress(fh.read())

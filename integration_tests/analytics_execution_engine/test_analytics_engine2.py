@@ -11,6 +11,7 @@ from time import sleep
 from copy import deepcopy
 from pathlib import Path
 from urllib.parse import urlparse
+from urllib.request import urlopen
 from shutil import rmtree
 from pprint import pformat
 import pytest
@@ -150,12 +151,15 @@ def check_submit_user_data(tmpdir, store_handler, local_config, celery_enabled, 
         '''Check user data retrieval.'''
         user_data = jro.user_data
         for datum in user_data:
-            filepath = None
             for key, value in datum.items():
                 if key == 'files':
-                    for filepath in value.values():
-                        with Path(filepath).open() as fh:
-                            assert fh.read() == text
+                    for url in value.values():
+                        parsed = urlparse(url)
+                        assert parsed.scheme == 'file', \
+                            'Expected `file` url in this test, ensure config contains ' \
+                            '`execution_engine.use_s3: False`'
+                        with urlopen(url) as fh:
+                            assert fh.read().decode('utf-8') == text
 
     _submit('check_submit_user_data', tmpdir, store_handler, local_config, celery_enabled,
             base_function, test_callback,
@@ -334,19 +338,23 @@ def check_submit_job_user_tasks(tmpdir, store_handler, local_config, celery_enab
         for datum in user_data:
             feature_no = None
             exts = None
-            filepath = None
+            url = None
             for key, value in datum.items():
                 if key == 'output':
                     exts = value
                 elif key == 'files':
-                    for name, path in value.items():
+                    for name, v_url in value.items():
                         if name[:15] == 'sub_dir/feature':
                             feature_no = int(name[15:17])
-                            filepath = path
+                            url = v_url
                 else:
                     raise Exception('Unexpected user data: {}: {}'.format(key, value))
-            with Path(filepath).open() as fh:
-                assert fh.read() == 'Test: {}\n'.format(feature_no)
+            parsed = urlparse(url)
+            assert parsed.scheme == 'file', \
+                'Expected `file` url in this test, ensure config contains ' \
+                '`execution_engine.use_s3: False`'
+            with urlopen(url) as fh:
+                assert fh.read().decode('utf-8') == 'Test: {}\n'.format(feature_no)
             extents[feature_no] = exts
         for feature_no, expected_extent in enumerate(expected_extents):
             assert feature_no in extents

@@ -721,3 +721,34 @@ def test_netcdf_multi_part():
 
     # can't tell without opening file
     assert ds('file:///tmp.nc').get_bandnumber() is None
+
+
+def test_multiband_support_in_datasetsourceII(example_gdal_path):
+    # This file isn't a hdf file.
+    # This is ok since I'm just testing building the filename
+    layer = 'MODIS_Grid_16DAY_250m_500m_VI:250m 16 days EVI:Evi'
+    fmt = "HDF4_EOS:EOS_GRID"
+    defn = {
+        "id": '12345678123456781234567812345678',
+        "format": {"name": fmt},
+        "image": {
+            "bands": {
+                'green': {
+                    'type': 'reflective',
+                    'cell_size': 25.0,
+                    'path': example_gdal_path,
+                    'layer': layer,
+                    'label': 'Coastal Aerosol',
+                    'number': '1',
+                },
+            }
+        }
+    }
+
+    # Without new band attribute, default to band number 1
+    d = Dataset(_EXAMPLE_DATASET_TYPE, defn, uris=['file:///tmp'])
+
+    ds = RasterDatasetDataSource(d, measurement_id='green')
+    assert ds.filename == '%s:%s:%s' % (fmt, example_gdal_path, layer)
+    # assert ds.get_bandnumber(None) == band_num
+

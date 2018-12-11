@@ -768,7 +768,7 @@ def test_multiband_support_in_datasetsourceII(example_gdal_path):
                 'green': {
                     'type': 'reflective',
                     'cell_size': 25.0,
-                    'path': example_gdal_path,
+                    'path': str(example_gdal_path),
                     'layer': layer,
                     'label': 'Coastal Aerosol',
                     'number': '1',

@@ -100,7 +100,8 @@ def test_first_source_is_priority_in_reproject_and_fuse():
     sources = [source1, source2]
 
     output_data = np.full(shape, fill_value=no_data, dtype='int16')
-    reproject_and_fuse(sources, output_data, dst_transform=identity, dst_projection=crs, dst_nodata=no_data)
+    reproject_and_fuse(sources, output_data, dst_transform=identity,
+                       dst_projection=crs, dst_nodata=no_data)
 
     assert (output_data == 1).all()
 
@@ -115,7 +116,8 @@ def test_second_source_used_when_first_is_empty():
     sources = [source1, source2]
 
     output_data = np.full(shape, fill_value=no_data, dtype='int16')
-    reproject_and_fuse(sources, output_data, dst_transform=identity, dst_projection=crs, dst_nodata=no_data)
+    reproject_and_fuse(sources, output_data, dst_transform=identity,
+                       dst_projection=crs, dst_nodata=no_data)
 
     assert (output_data == 2).all()
 
@@ -130,7 +132,8 @@ def test_mixed_result_when_first_source_partially_empty():
     sources = [source1, source2]
 
     output_data = np.full(shape, fill_value=no_data, dtype='int16')
-    reproject_and_fuse(sources, output_data, dst_transform=identity, dst_projection=crs, dst_nodata=no_data)
+    reproject_and_fuse(sources, output_data, dst_transform=identity,
+                       dst_projection=crs, dst_nodata=no_data)
 
     assert (output_data == [[1, 1], [2, 2]]).all()
 
@@ -145,7 +148,8 @@ def test_mixed_result_when_first_source_partially_empty_with_nan_nodata():
     sources = [source1, source2]
 
     output_data = np.full(shape, fill_value=no_data, dtype='float64')
-    reproject_and_fuse(sources, output_data, dst_transform=identity, dst_projection=crs, dst_nodata=no_data)
+    reproject_and_fuse(sources, output_data, dst_transform=identity,
+                       dst_projection=crs, dst_nodata=no_data)
 
     assert (output_data == [[1, 1], [2, 2]]).all()
 
@@ -209,7 +213,8 @@ def test_read_from_broken_source():
     shape = (2, 2)
     no_data = -1
 
-    source1 = FakeDatasetSource(value=[[1, 1], [no_data, no_data]], crs=crs, band_source_class=BrokenBandDataSource)
+    source1 = FakeDatasetSource(
+        value=[[1, 1], [no_data, no_data]], crs=crs, band_source_class=BrokenBandDataSource)
     source2 = FakeDatasetSource(value=[[2, 2], [2, 2]], crs=crs)
     sources = [source1, source2]
 
@@ -251,15 +256,18 @@ class FakeDataSource(object):
         self.shape = (613, 597)
 
         self.data = np.full(self.shape, self.nodata, dtype='int16')
-        self.data[:512, :512] = np.arange(512) + np.arange(512).reshape((512, 1))
+        self.data[:512, :512] = np.arange(
+            512) + np.arange(512).reshape((512, 1))
 
     def read(self, window=None, out_shape=None):
         data = self.data
         if window:
             data = self.data[slice(*window[0]), slice(*window[1])]
         if out_shape:
-            xidx = ((np.arange(out_shape[1]) + 0.5) * (data.shape[1] / out_shape[1]) - 0.5).round().astype('int')
-            yidx = ((np.arange(out_shape[0]) + 0.5) * (data.shape[0] / out_shape[0]) - 0.5).round().astype('int')
+            xidx = ((np.arange(
+                out_shape[1]) + 0.5) * (data.shape[1] / out_shape[1]) - 0.5).round().astype('int')
+            yidx = ((np.arange(
+                out_shape[0]) + 0.5) * (data.shape[0] / out_shape[0]) - 0.5).round().astype('int')
             data = data[np.meshgrid(yidx, xidx, indexing='ij')]
         return data
 
@@ -298,7 +306,8 @@ def assert_same_read_results(source, dst_shape, dst_dtype, dst_transform, dst_no
                          dst_projection=dst_projection,
                          resampling=resampling)
 
-    assert np.isclose(result, expected, atol=0, rtol=0.05, equal_nan=True).all()
+    assert np.isclose(result, expected, atol=0,
+                      rtol=0.05, equal_nan=True).all()
     return result
 
 
@@ -375,7 +384,8 @@ def test_read_from_fake_source():
         source,
         dst_shape=(517, 557),
         dst_dtype='float32',
-        dst_transform=data_source.transform * Affine.translation(0, 512) * Affine.scale(1, -1),
+        dst_transform=data_source.transform *
+        Affine.translation(0, 512) * Affine.scale(1, -1),
         dst_nodata=float('nan'),
         dst_projection=data_source.crs,
         resampling=Resampling.nearest)
@@ -384,7 +394,8 @@ def test_read_from_fake_source():
         source,
         dst_shape=(517, 557),
         dst_dtype='float32',
-        dst_transform=data_source.transform * Affine.translation(512, 0) * Affine.scale(-1, 1),
+        dst_transform=data_source.transform *
+        Affine.translation(512, 0) * Affine.scale(-1, 1),
         dst_nodata=float('nan'),
         dst_projection=data_source.crs,
         resampling=Resampling.nearest)
@@ -421,7 +432,8 @@ def test_read_from_fake_source():
         source,
         dst_shape=(35, 67),
         dst_dtype='float32',
-        dst_transform=data_source.transform * Affine.translation(27, 35) * Affine.scale(8, 16),
+        dst_transform=data_source.transform *
+        Affine.translation(27, 35) * Affine.scale(8, 16),
         dst_nodata=float('nan'),
         dst_projection=data_source.crs,
         resampling=Resampling.cubic)
@@ -430,7 +442,8 @@ def test_read_from_fake_source():
         source,
         dst_shape=(35, 67),
         dst_dtype='float32',
-        dst_transform=data_source.transform * Affine.translation(-13, -27) * Affine.scale(8, 16),
+        dst_transform=data_source.transform *
+        Affine.translation(-13, -27) * Affine.scale(8, 16),
         dst_nodata=float('nan'),
         dst_projection=data_source.crs,
         resampling=Resampling.cubic)
@@ -440,7 +453,8 @@ def test_read_from_fake_source():
         source,
         dst_shape=(35, 67),
         dst_dtype='float32',
-        dst_transform=data_source.transform * Affine.translation(15, 512 + 17) * Affine.scale(8, -16),
+        dst_transform=data_source.transform *
+        Affine.translation(15, 512 + 17) * Affine.scale(8, -16),
         dst_nodata=float('nan'),
         dst_projection=data_source.crs,
         resampling=Resampling.cubic)
@@ -449,7 +463,8 @@ def test_read_from_fake_source():
         source,
         dst_shape=(67, 35),
         dst_dtype='float32',
-        dst_transform=data_source.transform * Affine.translation(512 - 23, -29) * Affine.scale(-16, 8),
+        dst_transform=data_source.transform *
+        Affine.translation(512 - 23, -29) * Affine.scale(-16, 8),
         dst_nodata=float('nan'),
         dst_projection=data_source.crs,
         resampling=Resampling.cubic)
@@ -462,11 +477,13 @@ class TestRasterDataReading(object):
         np.nan, float("nan"), -999
     ])
     def xtest_failed_data_read(self, make_sample_geotiff, dst_nodata):
-        sample_geotiff_path, geobox, written_data = make_sample_geotiff(dst_nodata)
+        sample_geotiff_path, geobox, written_data = make_sample_geotiff(
+            dst_nodata)
 
         src_transform = Affine(25.0, 0.0, 1200000.0,
                                0.0, -25.0, -4200000.0)
-        source = RasterFileDataSource(sample_geotiff_path, 1, transform=src_transform)
+        source = RasterFileDataSource(
+            sample_geotiff_path, 1, transform=src_transform)
 
         dest = np.zeros((20, 100))
         dst_nodata = -999
@@ -476,7 +493,8 @@ class TestRasterDataReading(object):
         # Read exactly the hunk of data that we wrote
         dst_transform = Affine(25.0, 0.0, 127327.0,
                                0.0, -25.0, -417232.0)
-        read_from_source(source, dest, dst_transform, dst_nodata, dst_projection, dst_resampling)
+        read_from_source(source, dest, dst_transform,
+                         dst_nodata, dst_projection, dst_resampling)
 
         assert np.all(written_data == dest)
 
@@ -484,7 +502,8 @@ class TestRasterDataReading(object):
         np.nan, float("nan"), -999
     ])
     def test_read_with_rasterfiledatasource(self, make_sample_geotiff, dst_nodata):
-        sample_geotiff_path, geobox, written_data = make_sample_geotiff(dst_nodata)
+        sample_geotiff_path, geobox, written_data = make_sample_geotiff(
+            dst_nodata)
 
         source = RasterFileDataSource(str(sample_geotiff_path), 1)
 
@@ -494,7 +513,8 @@ class TestRasterDataReading(object):
         dst_resampling = Resampling.nearest
 
         # Read exactly the hunk of data that we wrote
-        read_from_source(source, dest, dst_transform, dst_nodata, dst_projection, dst_resampling)
+        read_from_source(source, dest, dst_transform,
+                         dst_nodata, dst_projection, dst_resampling)
 
         assert np.all(written_data == dest)
 
@@ -503,7 +523,8 @@ class TestRasterDataReading(object):
         offset_transform = dst_transform * Affine.translation(xoff, 0)
         dest = np.zeros_like(written_data)
 
-        read_from_source(source, dest, offset_transform, dst_nodata, dst_projection, dst_resampling)
+        read_from_source(source, dest, offset_transform,
+                         dst_nodata, dst_projection, dst_resampling)
         assert np.all(written_data[:, xoff:] == dest[:, :xoff])
 
         # Try reading from complete outside of our area, should return nodata
@@ -511,7 +532,8 @@ class TestRasterDataReading(object):
         offset_transform = dst_transform * Affine.translation(xoff, 0)
         dest = np.zeros_like(written_data)
 
-        read_from_source(source, dest, offset_transform, dst_nodata, dst_projection, dst_resampling)
+        read_from_source(source, dest, offset_transform,
+                         dst_nodata, dst_projection, dst_resampling)
         if np.isnan(dst_nodata):
             assert np.all(np.isnan(dest))
         else:
@@ -532,7 +554,8 @@ class TestRasterDataReading(object):
         dst_resampling = Resampling.nearest
 
         # Read exactly the hunk of data that we wrote
-        read_from_source(source, dest, dst_transform, dst_nodata, dst_projection, dst_resampling)
+        read_from_source(source, dest, dst_transform,
+                         dst_nodata, dst_projection, dst_resampling)
 
         assert np.all(dest == -999)
 
@@ -545,17 +568,20 @@ class TestRasterDataReading(object):
                                0.0, -25.0, -900000.0)
 
             # Read all raw data from source file
-            band_data_source = OverrideBandDataSource(band, nodata, crs, transform)
+            band_data_source = OverrideBandDataSource(
+                band, nodata, crs, transform)
             dest1 = band_data_source.read()
             assert dest1.shape
 
             # Attempt to read with the same transform parameters
-            dest2 = np.full(shape=(4000, 4000), fill_value=nodata, dtype=np.float32)
+            dest2 = np.full(shape=(4000, 4000),
+                            fill_value=nodata, dtype=np.float32)
             dst_transform = transform
             dst_crs = crs
             dst_nodata = nodata
             resampling = datacube.storage.storage.RESAMPLING_METHODS['nearest']
-            band_data_source.reproject(dest2, dst_transform, dst_crs, dst_nodata, resampling)
+            band_data_source.reproject(
+                dest2, dst_transform, dst_crs, dst_nodata, resampling)
             assert (dest1 == dest2).all()
 
     def test_read_from_file_with_missing_crs(self, no_crs_gdal_path):
@@ -568,7 +594,8 @@ class TestRasterDataReading(object):
         nodata = -999
         transform = Affine(0.01, 0.0, 111.975,
                            0.0, 0.01, -9.975)
-        data_source = RasterFileDataSource(no_crs_gdal_path, bandnumber=1, nodata=nodata, crs=crs, transform=transform)
+        data_source = RasterFileDataSource(
+            no_crs_gdal_path, bandnumber=1, nodata=nodata, crs=crs, transform=transform)
         with data_source.open() as src:
             dest1 = src.read()
             assert dest1.shape == (10, 10)
@@ -579,12 +606,15 @@ def make_sample_netcdf(tmpdir):
     """Make a test Geospatial NetCDF file, 4000x4000 int16 random data, in a variable named `sample`.
     Return the GDAL access string."""
     sample_nc = str(tmpdir.mkdir('netcdfs').join('sample.nc'))
-    geobox = GeoBox(4000, 4000, affine=Affine(25.0, 0.0, 1200000, 0.0, -25.0, -4200000), crs=CRS('EPSG:3577'))
+    geobox = GeoBox(4000, 4000, affine=Affine(
+        25.0, 0.0, 1200000, 0.0, -25.0, -4200000), crs=CRS('EPSG:3577'))
 
     sample_data = np.random.randint(10000, size=(4000, 4000), dtype=np.int16)
 
-    variables = {'sample': Variable(sample_data.dtype, nodata=-999, dims=geobox.dimensions, units=1)}
-    nco = create_netcdf_storage_unit(sample_nc, geobox.crs, geobox.coordinates, variables=variables, variable_params={})
+    variables = {'sample': Variable(
+        sample_data.dtype, nodata=-999, dims=geobox.dimensions, units=1)}
+    nco = create_netcdf_storage_unit(
+        sample_nc, geobox.crs, geobox.coordinates, variables=variables, variable_params={})
 
     nco['sample'][:] = sample_data
 
@@ -599,13 +629,15 @@ def make_sample_geotiff(tmpdir):
     def internal_make_sample_geotiff(nodata=-999):
         sample_geotiff = str(tmpdir.mkdir('tiffs').join('sample.tif'))
 
-        geobox = GeoBox(100, 200, affine=Affine(25.0, 0.0, 0, 0.0, -25.0, 0), crs=CRS('EPSG:3577'))
+        geobox = GeoBox(100, 200, affine=Affine(
+            25.0, 0.0, 0, 0.0, -25.0, 0), crs=CRS('EPSG:3577'))
         if np.isnan(nodata):
             out_dtype = 'float64'
             sample_data = 10000 * np.random.random_sample(size=geobox.shape)
         else:
             out_dtype = 'int16'
-            sample_data = np.random.randint(10000, size=geobox.shape, dtype=out_dtype)
+            sample_data = np.random.randint(
+                10000, size=geobox.shape, dtype=out_dtype)
         rio_args = {
             'height': geobox.height,
             'width': geobox.width,
@@ -751,4 +783,3 @@ def test_multiband_support_in_datasetsourceII(example_gdal_path):
     ds = RasterDatasetDataSource(d, measurement_id='green')
     assert ds.filename == '%s:%s:%s' % (fmt, example_gdal_path, layer)
     # assert ds.get_bandnumber(None) == band_num
-

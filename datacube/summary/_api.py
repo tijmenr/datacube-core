@@ -6,7 +6,7 @@ from ._schema import PRODUCT_SUMMARIES
 
 class SummaryAPI:
     def __init__(self, index: Index):
-        self._engine = index._db._engine
+        self._engine = index._db._engine  # pylint: disable=protected-access
 
     def get_summaries(self, **kwargs):
         return self._engine.execute(

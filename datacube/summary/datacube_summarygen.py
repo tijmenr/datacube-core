@@ -10,8 +10,8 @@ such as
 import logging
 import click
 
+import ogr
 from datacube import Datacube
-from datacube.utils.geometry import unary_union
 
 
 LOG = logging.getLogger(__name__)
@@ -26,24 +26,24 @@ def cli(ctx, config):
     ctx.obj = Datacube(config=config).index
 
 
-def compute_extent(index, **kwargs):
+def compute_extent(index, crs, **kwargs):
 
     time_footprint = []
-
-    def consume_datasets(datasets):
-        for dataset in datasets:
-            time_footprint.append(dataset.center_time)
-            if dataset.extent:
-                yield dataset.extent
+    geom = ogr.Geometry(ogr.wkbMultiPolygon)
 
     datasets = index.datasets.search(**kwargs)
+    for dataset in datasets:
+        time_footprint.append(dataset.center_time)
+        if dataset.extent:
+            geom.AddGeometry(dataset.extent.to_crs(crs).__geo_interface__)
+        else:
+            LOG.info('Extent undefined for the dataset: %s', dataset.id)
 
     if not datasets:
-        return None
+        LOG.info('No datasets returned for query: %s', kwargs)
 
-    spatial_footprint = unary_union(consume_datasets(datasets))
-
-    return spatial_footprint, time_footprint or None
+    return geom.UnionCascaded(), time_footprint
 
 
-
+def compute_extent_periodic(index, product, period_type):
+    pass

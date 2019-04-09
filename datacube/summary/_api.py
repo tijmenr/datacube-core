@@ -30,7 +30,7 @@ class SummaryAPI:  # pylint: disable=protected-access
         time_field = DateDocField('aquisition_time_min',
                                   'Min of time when dataset was acquired',
                                   DATASET.c.metadata,
-                                  False,
+                                  False,  # is it indexed ToDo
                                   offset=min_offset,
                                   selection='least')
 
@@ -50,7 +50,7 @@ class SummaryAPI:  # pylint: disable=protected-access
         time_field = DateDocField('aquisition_time_max',
                                   'Max of time when dataset was acquired',
                                   DATASET.c.metadata,
-                                  False,
+                                  False,  # is it indexed ToDo
                                   offset=max_offset,
                                   selection='greatest')
 

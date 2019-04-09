@@ -6,13 +6,16 @@ such as
     - What is the footprint of product 'product_A' for region_code 'codeA' for month 'monthA'?
 
 """
+from dateutil.rrule import rrule
+from dateutil.relativedelta import relativedelta
+from datetime import datetime
+import ogr
+from datacube import Datacube
+from datacube.model import Range
+from datacube.summary import SummaryAPI
 
 import logging
 import click
-
-import ogr
-from datacube import Datacube
-
 
 LOG = logging.getLogger(__name__)
 
@@ -45,5 +48,38 @@ def compute_extent(index, crs, **kwargs):
     return geom.UnionCascaded(), time_footprint
 
 
-def compute_extent_periodic(index, product, period_type):
-    pass
+def compute_extent_periodic(index, product, freq, crs):
+
+    # Get time bounds for the product
+    summary = SummaryAPI(index)
+    time_min = summary.get_product_time_min(product)
+    time_max = summary.get_product_time_max(product)
+
+    # The start date must be the first of the same month of time_min
+    time_min_ = time_min - relativedelta(months=1)
+
+    # Find out product crs
+    if not crs:
+        product_ = index.products.get_by_name(product)
+        storage = product_.definition.get('storage')
+        if storage is None:
+            raise ValueError('crs is not specified for this product. It must be supplied')
+        crs = storage.get('crs')
+        if crs is None:
+            raise ValueError('crs is not specified for this product. It must be supplied')
+
+    month_start_list = rrule(freq, bymonthday=1, dtstart=time_min_, until=time_max)
+
+    for time_range in _get_time_ranges(month_start_list):
+        extents = compute_extent(index, crs, product=product, time=time_range)
+
+
+def _get_time_ranges(date_list):
+
+    for i, date in enumerate(date_list):
+        if i == 0:
+            prev = date
+            continue
+
+        yield Range(prev, date)
+        prev = date

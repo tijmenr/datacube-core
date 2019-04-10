@@ -48,7 +48,7 @@ def compute_extent(index, crs, **kwargs):
     return geom.UnionCascaded(), time_footprint
 
 
-def compute_extent_periodic(index, product, freq, crs):
+def compute_extent_periodic(index, product, freq, crs=None):
 
     # Get time bounds for the product
     summary = SummaryAPI(index)
@@ -58,8 +58,8 @@ def compute_extent_periodic(index, product, freq, crs):
     # The start date must be the first of the same month of time_min
     time_min_ = time_min - relativedelta(months=1)
 
-    # Find out product crs
     if not crs:
+        # Find out product crs
         product_ = index.products.get_by_name(product)
         storage = product_.definition.get('storage')
         if storage is None:
@@ -71,7 +71,7 @@ def compute_extent_periodic(index, product, freq, crs):
     month_start_list = rrule(freq, bymonthday=1, dtstart=time_min_, until=time_max)
 
     for time_range in _get_time_ranges(month_start_list):
-        extents = compute_extent(index, crs, product=product, time=time_range)
+        yield compute_extent(index, crs, product=product, time=time_range)
 
 
 def _get_time_ranges(date_list):

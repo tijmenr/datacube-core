@@ -1,1 +1,1 @@
-from ._api import SummaryAPI
+from ._api import SummaryAPI, DatasetSpatial

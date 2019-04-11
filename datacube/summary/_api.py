@@ -50,8 +50,8 @@ class SummaryAPI:  # pylint: disable=protected-access
     def get_product_time_min(self, product: str):
 
         # Get the offsets of min time in dataset doc
-        metadata_type = self._index.products.get_by_name(product).metadata_type
-        dataset_section = metadata_type.definition['dataset']
+        product = self._index.products.get_by_name(product)
+        dataset_section = product.metadata_type.definition['dataset']
         min_offset = dataset_section['search_fields']['time']['min_offset']
 
         time_field = DateDocField('aquisition_time_min',
@@ -62,7 +62,9 @@ class SummaryAPI:  # pylint: disable=protected-access
                                   selection='least')
 
         result = self._index._db._engine.execute(
-            select([func.min(time_field.alchemy_expression)])
+            select([func.min(time_field.alchemy_expression)]).where(
+                DATASET.c.dataset_type_ref == product.id
+            )
         ).first()
 
         return result[0]
@@ -70,8 +72,8 @@ class SummaryAPI:  # pylint: disable=protected-access
     def get_product_time_max(self, product: str):
 
         # Get the offsets of min time in dataset doc
-        metadata_type = self._index.products.get_by_name(product).metadata_type
-        dataset_section = metadata_type.definition['dataset']
+        product = self._index.products.get_by_name(product)
+        dataset_section = product.metadata_type.definition['dataset']
         max_offset = dataset_section['search_fields']['time']['max_offset']
 
         time_field = DateDocField('aquisition_time_max',
@@ -82,7 +84,9 @@ class SummaryAPI:  # pylint: disable=protected-access
                                   selection='greatest')
 
         result = self._index._db._engine.execute(
-            select([func.max(time_field.alchemy_expression)])
+            select([func.max(time_field.alchemy_expression)]).where(
+                DATASET.c.dataset_type_ref == product.id
+            )
         ).first()
 
         return result[0]

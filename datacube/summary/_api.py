@@ -1,56 +1,21 @@
-from typing import Optional
 import json
 import logging
 from collections import namedtuple
-from datetime import datetime
 
 from sqlalchemy import select, func
 from datacube.index import Index, fields
 from datacube.model import Dataset
-from datacube.drivers.postgres._fields import DateDocField, NativeField, SimpleDocField
+from datacube.drivers.postgres._fields import DateDocField, SimpleDocField
 from datacube.drivers.postgres._schema import DATASET
-from datacube.utils import geometry, cached_property
 
 from ._schema import PRODUCT_SUMMARIES
 
 _LOG = logging.getLogger(__name__)
 
 
-class DatasetLight(object):
-    def __init__(self, uuid, grid_spatial, time=None, **kwargs):
-        self._gs = grid_spatial
-        self.id = uuid
-        self.time = time
-        self.search_fields = kwargs
-
-    @property
-    def crs(self) -> Optional[geometry.CRS]:
-        """ Return CRS if available
-        """
-
-        return Dataset.crs.__get__(self)
-
-    @property
-    def extent(self) -> Optional[geometry.Geometry]:
-        """ :returns: valid extent of the dataset or None
-        """
-
-        return Dataset.extent.__get__(self, DatasetLight)
-
-    @property
-    def center_time(self) -> Optional[datetime]:
-        """ mid-point of time range
-        """
-        time = self.time
-        if time is None:
-            return None
-        return time.begin + (time.end - time.begin) // 2
-
-
 class SummaryAPI:  # pylint: disable=protected-access
     def __init__(self, index: Index):
         self._index = index
-        # self._engine = index._db._engine  # pylint: disable=protected-access
 
     def get_summaries(self, **kwargs):
         return self._index._db._engine.execute(
@@ -61,7 +26,16 @@ class SummaryAPI:  # pylint: disable=protected-access
             )
         ).first()
 
+
+class SearchAPI:  # pylint: disable=protected-access
+
+    def __init__(self, index: Index):
+        self._index = index
+
     def get_product_time_min(self, product: str):
+        """
+        Returns the minimum acquisition time of the product.
+        """
 
         # Get the offsets of min time in dataset doc
         product = self._index.products.get_by_name(product)
@@ -84,6 +58,9 @@ class SummaryAPI:  # pylint: disable=protected-access
         return result[0]
 
     def get_product_time_max(self, product: str):
+        """
+        Returns the maximum acquisition time of the product.
+        """
 
         # Get the offsets of min time in dataset doc
         product = self._index.products.get_by_name(product)
@@ -106,13 +83,34 @@ class SummaryAPI:  # pylint: disable=protected-access
         return result[0]
 
     # pylint: disable=redefined-outer-name
-    def search_returing_datasets_light(self, field_names: tuple, limit=None, **query):
+    def search_returing_datasets_light(self, field_names: tuple, custom_offsets=None, limit=None, **query):
+        """
+        This is dataset search function that returns the results as objects of a dynamically
+        generated Dataset class that is a subclass of tuple.
+
+        Only the requested fields will be returned together with derived attributes as property functions
+        similer to the datacube.model.Dataset class.
+
+        The select fields can be custom fields (those not specified in metadata_type, fixed fields, or
+        native fields). This require custom offsets of the metadata doc be provided.
+
+        The datasets can be selected based on values of custom fields as well as long as relevant custom
+        offsets are provided.
+
+        :param field_names: A tuple of field names that would be returned including derived fields
+                            such as extent, crs
+        :param custom_offsets: A dictionary of offsets in the metadata doc for custom fields
+        :param limit: Number of datasets returned per product.
+        :param query: key, value mappings of query that will be processed against metadata_types,
+                      product definitions on the client side as well as dataset table.
+        :return: A Dynamically generated DatasetLight (a subclass of tuple) objects.
+        """
 
         assert field_names
 
-        for product, query_exprs in self.make_query_expr(query):
+        for product, query_exprs in self.make_query_expr(query, custom_offsets):
 
-            select_fields, fields_to_process = self.make_search_fields(product, field_names)
+            select_fields, fields_to_process = self.make_select_fields(product, field_names, custom_offsets)
 
             result_type = namedtuple('DatasetLight', tuple(field.name for field in select_fields))
 
@@ -144,7 +142,11 @@ class SummaryAPI:  # pylint: disable=protected-access
                     field_values['grid_spatial'] = json.loads(field_values['grid_spatial'])
                 yield DatasetLight(**field_values)
 
-    def make_search_fields(self, product, field_names):
+    def make_select_fields(self, product, field_names, custom_offsets):
+        """
+        Parse and generate the list of select fields to be passed to the database API and
+        those fields that are to be further processed once the results are returned.
+        """
 
         assert product and field_names
 
@@ -170,6 +172,12 @@ class SummaryAPI:  # pylint: disable=protected-access
                         if not fields_to_process.get('grid_spatial'):
                             fields_to_process['grid_spatial'] = set()
                         fields_to_process['grid_spatial'].add(field_name)
+                elif field_name in custom_offsets:
+                    select_fields.append(SimpleDocField(
+                        field_name, field_name, DATASET.c.metadata,
+                        False,
+                        offset=custom_offsets[field_name]
+                    ))
 
         return select_fields, fields_to_process
 
@@ -189,13 +197,47 @@ class SummaryAPI:  # pylint: disable=protected-access
 
         return tuple(fields.to_expressions(dataset_fields.get, **source_queries))
 
-    def make_query_expr(self, query):
+    def make_query_expr(self, query, custom_offsets):
+        """
+        Generate query expressions including queries based on custom fields
+        """
 
         product_queries = list(self._index.datasets._get_product_queries(query))
+        custom_query = dict()
         if not product_queries:
-            raise ValueError('No products match search terms: %r' % query)
+            # The key, values in query that are un-machable with info
+            # in metadata types and product definitions, perhaps there are custom
+            # fields, will need to handle custom fields separately
+
+            canonical_query = query.copy()
+            custom_query = {key: canonical_query.pop(key) for key in custom_offsets
+                            if key in canonical_query}
+            product_queries = list(self._index.datasets._get_product_queries(canonical_query))
+
+            if not product_queries:
+                raise ValueError('No products match search terms: %r' % query)
 
         for q, product in product_queries:
+            print(q, product)
             dataset_fields = product.metadata_type.dataset_fields
             query_exprs = tuple(fields.to_expressions(dataset_fields.get, **q))
-            yield product, query_exprs
+            custom_query_exprs = tuple(self.get_custom_query_expressions(custom_query, custom_offsets))
+
+            yield product, query_exprs + custom_query_exprs
+
+    def get_custom_query_expressions(self, custom_query, custom_offsets):
+        """
+        Generate query expressions for custom fields. it is assumed that custom fields are to be found
+        in metadata doc and their offsets are provided
+        """
+
+        custom_exprs = []
+        for key in custom_query:
+            # for now we assume all custom query fields are SimpleDocFields
+            custom_field = SimpleDocField(
+                custom_query[key], custom_query[key], DATASET.c.metadata,
+                False, offset=custom_offsets[key]
+            )
+            custom_exprs.append(fields.as_expression(custom_field, custom_query[key]))
+
+        return custom_exprs

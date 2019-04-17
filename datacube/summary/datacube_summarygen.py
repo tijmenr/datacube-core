@@ -12,7 +12,7 @@ from datetime import datetime
 import ogr
 from datacube import Datacube
 from datacube.model import Range
-from datacube.summary import SummaryAPI
+from datacube.summary import SearchAPI
 
 import logging
 import click
@@ -51,9 +51,9 @@ def compute_extent(summary, crs, **kwargs):
 def compute_extent_periodic(index, product, freq, crs=None):
 
     # Get time bounds for the product
-    summary = SummaryAPI(index)
-    time_min = summary.get_product_time_min(product)
-    time_max = summary.get_product_time_max(product)
+    search = SearchAPI(index)
+    time_min = search.get_product_time_min(product)
+    time_max = search.get_product_time_max(product)
 
     # The start date must be the first of the same month of time_min
     time_min_ = time_min - relativedelta(months=1)
@@ -71,7 +71,7 @@ def compute_extent_periodic(index, product, freq, crs=None):
     month_start_list = rrule(freq, bymonthday=1, dtstart=time_min_, until=time_max)
 
     for time_range in _get_time_ranges(month_start_list):
-        yield compute_extent(summary, crs, product=product, time=time_range)
+        yield compute_extent(search, crs, product=product, time=time_range)
 
 
 def _get_time_ranges(date_list):

@@ -61,10 +61,6 @@ templates_path = ['_templates']
 # The suffix of source filenames.
 source_suffix = ['.rst', '.md']
 
-source_parsers = {
-    '.md': 'recommonmark.parser.CommonMarkParser',
-}
-
 # The encoding of source files.
 # source_encoding = 'utf-8-sig'
 
@@ -108,11 +104,10 @@ autosummary_generate = True
 extlinks = {'issue': ('https://github.com/opendatacube/datacube-core/issues/%s', 'issue '),
             'pull': ('https://github.com/opendatacube/datacube-core/pulls/%s', 'PR ')}
 intersphinx_mapping = {
-    'python': ('https://docs.python.org/', None),
+    'python': ('https://docs.python.org/3/', None),
     'pandas': ('https://pandas.pydata.org/pandas-docs/stable/', None),
     'numpy': ('https://docs.scipy.org/doc/numpy/', None),
     'xarray': ('https://xarray.pydata.org/en/stable/', None),
-#    'dask': ('https://dask.pydata.org/en/stable/', None),
 }
 
 graphviz_output_format = 'svg'
@@ -183,6 +178,19 @@ htmlhelp_basename = 'ODCdoc'
 latex_documents = [
     ('index', 'ODC.tex', u'Open Data Cube Documentation', 'Open Data Cube', 'manual')
 ]
+
+# -- Options for manual page output ---------------------------------------
+
+# One entry per manual page. List of tuples
+# (source start file, name, description, authors, manual section).
+man_pages = [
+    ('ops/tools', 'datacube',
+     'Datacube',
+     ['The Open Data Cube Authors'], 1),
+    ]
+
+# If true, show URL addresses after external links.
+man_show_urls = True
 
 plantuml_output_format = 'svg'
 plantuml_latex_output_format = 'pdf'

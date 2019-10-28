@@ -59,7 +59,7 @@ extensions = [
 templates_path = ['_templates']
 
 # The suffix of source filenames.
-source_suffix = ['.rst', '.md']
+source_suffix = ['.rst']
 
 # The encoding of source files.
 # source_encoding = 'utf-8-sig'
@@ -119,10 +119,14 @@ graphviz_output_format = 'svg'
 if on_rtd:
     html_theme = 'default'
 else:
-    import sphinx_rtd_theme
+    try:
+        import sphinx_rtd_theme
 
-    html_theme = 'sphinx_rtd_theme'
-    html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
+        html_theme = 'sphinx_rtd_theme'
+        html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
+    except ImportError:
+        print('Install sphinx_rtd_theme to build html docs')
+        html_theme = 'default'
 
 html_theme_options = {
     'collapse_navigation': False,

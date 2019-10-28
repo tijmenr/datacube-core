@@ -1,5 +1,14 @@
 """
 Helper methods for working with AWS
+
+These implement some tricks for efficiently using AWS resources:
+
+- By default, rasterio/GDAL repeatedly retrieves credentials from STS. This makes each request
+  take seconds instead of ms.
+- If the AWS region is not set before making S3 requests, an extra HTTP redirect occurs, again
+  adding to latency.
+- These are super problematic when making lots of small data requests.
+
 """
 import botocore
 import botocore.session

@@ -46,6 +46,7 @@ and  related data from multiple satellite and other acquisition systems.
    ops/install.rst
    ops/db_setup.rst
    ops/config.rst
+   ops/environment_variables.rst
    ops/indexing.rst
    ops/ingest.rst
    ops/product.rst

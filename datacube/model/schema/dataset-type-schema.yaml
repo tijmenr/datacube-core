@@ -19,6 +19,8 @@ properties:
         pattern: '^[\w\-.+]+$'
     metadata:
         type: object
+    extra_dimension:
+        "$ref": "#/definitions/extra_dimension"
     storage:
         "$ref": "#/definitions/storage"
     load:
@@ -48,6 +50,54 @@ patternProperties:
 definitions:
     dtype:
         enum: ["float16", "float32", "float64", "int8", "int16", "int32", "int64", "uint8", "uint16", "uint32", "uint64", "complex64", "complex128"]
+    extra_dimension:
+        type: object
+        description: Describes how the 3rd dimension is stored
+        properties:
+            name:
+                type: string
+                description: Name of the dimension
+            values:
+                type: array
+                description: Coordinate values of the dimension
+                items:
+                    type: number
+            dtype:
+                "$ref": "#/definitions/dtype"
+            measurements:
+                type: array
+                items:
+                    type: object
+                    properties:
+                        name:
+                            type: string
+                            description: Name of the measurement
+                        mapping:
+                            type: array
+                            description: Mapping to the measurement names
+                            items:
+                                type: string
+                        dtype:
+                            "$ref": "#/definitions/dtype"
+                        nodata:
+                            oneOf:
+                                - type: number
+                                - enum: [NaN, Inf, -Inf]
+                        units:
+                            type: string
+                    required:
+                    - name
+                    - mapping
+                    - dtype
+                    - nodata
+                    - units
+                    additionalProperties: false
+        required:
+        - name
+        - values
+        - dtype
+        - measurements
+        additionalProperties: false
     measurement:
         type: object
         properties:

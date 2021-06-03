@@ -6,9 +6,7 @@ from datacube.utils.masking import valid_data_mask
 
 def formula_parser():
     return lark.Lark("""
-                ?expr: num_expr | bool_expr
-
-                ?bool_expr: or_clause | comparison_clause
+                ?expr: or_clause | comparison_clause | shift
 
                 ?or_clause: or_clause "|" and_clause -> or_
                           | or_clause "^" and_clause -> xor
@@ -16,19 +14,16 @@ def formula_parser():
                 ?and_clause: and_clause "&" term -> and_
                            | term
                 ?term: "not" term -> not_
-                     | "(" bool_expr ")"
+                     | "(" expr ")"
 
                 ?comparison_clause: eq | ne | le | ge | lt | gt
 
-                eq: num_expr "==" num_expr
-                ne: num_expr "!=" num_expr
-                le: num_expr "<=" num_expr
-                ge: num_expr ">=" num_expr
-                lt: num_expr "<" num_expr
-                gt: num_expr ">" num_expr
-
-
-                ?num_expr: shift
+                eq: expr "==" expr
+                ne: expr "!=" expr
+                le: expr "<=" expr
+                ge: expr ">=" expr
+                lt: expr "<" expr
+                gt: expr ">" expr
 
                 ?shift: shift "<<" sum -> lshift
                       | shift ">>" sum -> rshift
@@ -53,7 +48,7 @@ def formula_parser():
                 ?subatom: NAME -> var_name
                         | FLOAT -> float_literal
                         | INT -> int_literal
-                        | "(" num_expr ")"
+                        | "(" expr ")"
 
 
                 %import common.FLOAT

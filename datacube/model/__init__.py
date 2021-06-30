@@ -1080,6 +1080,25 @@ class ExtraDimensions:
                 shapes += (len(self.measurements_values(name)),)
         return names, shapes
 
+    def dask_indices(self, start, stop, chunk_size):
+        """Returns the indices required to builld a dask array
+
+        :param start: The start index
+        :param stop: The stop index
+        :param chunk_size: The chunk size
+        :return: A tuple containing a (index, shape) per chunk.
+        """
+        shape = stop - start
+        step_size = math.floor(shape/chunk_size)
+        max_steps = math.ceil(shape/chunk_size)
+        remainder = (shape/chunk_size) - math.floor(shape/chunk_size)
+        result = [chunk_size for i in range(step_size)]
+        indices = [(start + chunk_size*i, start + chunk_size*(i+1)) for i in range(step_size)]
+        if step_size != max_steps:
+            result.append(int(round(remainder*chunk_size)))
+            indices.append((start + chunk_size*step_size, int(chunk_size*step_size + round(remainder*chunk_size)),))
+        return zip(indices, result)
+
     def __str__(self) -> str:
         return (
             f"ExtraDimensions(extra_dim={dict(self._dims)}, dim_slice={self._dim_slice} "

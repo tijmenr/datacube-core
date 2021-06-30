@@ -119,7 +119,7 @@ def read_time_slice(rdr,
 
     :returns: affected destination region
     """
-    assert dst.shape == dst_gbox.shape
+    assert dst.shape[-2:] == dst_gbox.shape
     src_gbox = rdr_geobox(rdr)
 
     rr = compute_reproject_roi(src_gbox, dst_gbox)
@@ -131,6 +131,9 @@ def read_time_slice(rdr,
     scale = pick_read_scale(rr.scale, rdr)
 
     paste_ok, _ = can_paste(rr, ttol=0.9 if is_nn else 0.01)
+    extra_dim_slice = ()
+    if extra_dim_index is not None and isinstance(extra_dim_index, tuple):
+        extra_dim_slice = (slice(None, None),)
 
     def norm_read_args(roi, shape, extra_dim_index):
         if roi_is_full(roi, rdr.shape):
@@ -155,13 +158,13 @@ def read_time_slice(rdr,
         A = rr.transform.linear
         sx, sy = A.a, A.e
 
-        dst = dst[rr.roi_dst]
+        dst = dst[extra_dim_slice + rr.roi_dst]
         pix = rdr.read(*norm_read_args(rr.roi_src, dst.shape, extra_dim_index))
 
         if sx < 0:
-            pix = pix[:, ::-1]
+            pix = np.flip(pix, -1)
         if sy < 0:
-            pix = pix[::-1, :]
+            pix = np.flip(pix, -2)
 
         if rdr.nodata is None:
             np.copyto(dst, pix)
@@ -174,13 +177,17 @@ def read_time_slice(rdr,
             rr.roi_dst = roi_pad(rr.roi_dst, 1, dst_gbox.shape)
             rr.roi_src = roi_pad(rr.roi_src, 1, src_gbox.shape)
 
-        dst = dst[rr.roi_dst]
+        extra_dim_length = ()
+        if extra_dim_index is not None and isinstance(extra_dim_index, tuple):
+            extra_dim_length = (extra_dim_index[1] - extra_dim_index[0],)
+
+        dst = dst[extra_dim_slice + rr.roi_dst]
         dst_gbox = dst_gbox[rr.roi_dst]
         src_gbox = src_gbox[rr.roi_src]
         if scale > 1:
             src_gbox = gbx.zoom_out(src_gbox, scale)
 
-        pix = rdr.read(*norm_read_args(rr.roi_src, src_gbox.shape, extra_dim_index))
+        pix = rdr.read(*norm_read_args(rr.roi_src, extra_dim_length + src_gbox.shape, extra_dim_index))
 
         if rr.transform.linear is not None:
             A = (~src_gbox.transform)*dst_gbox.transform

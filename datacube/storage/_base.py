@@ -100,6 +100,10 @@ class BandInfo:
 
         bint, layer = _get_band_and_layer(mm)
 
+        # We don't use this for 3D measurements
+        if 'extra_dim' in mp:
+            bint = 1
+
         self.name = band
         self.uri = uri_resolve(base_uri, mm.get('path'))
         self.band = bint

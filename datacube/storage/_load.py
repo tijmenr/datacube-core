@@ -61,7 +61,10 @@ def reproject_and_fuse(datasources: List[DataSource],
     """
     # pylint: disable=too-many-locals
     from ._read import read_time_slice
-    assert len(destination.shape) == 2
+    if extra_dim_index is not None and isinstance(extra_dim_index, tuple):
+        assert len(destination.shape) == 3
+    else:
+        assert len(destination.shape) == 2
 
     def copyto_fuser(dest: np.ndarray, src: np.ndarray) -> None:
         _default_fuser(dest, src, dst_nodata)

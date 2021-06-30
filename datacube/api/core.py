@@ -626,11 +626,9 @@ class Datacube(object):
         for index, datasets in numpy.ndenumerate(sources.values):
             for m in measurements:
                 if 'extra_dim' in m:
-                    # When we want to support 3D native reads, we can start by replacing the for loop with
-                    # read_ios.append(((index + extra_dim_index), (datasets, m, index_subset)))
-                    index_subset = extra_dims.measurements_index(m.extra_dim)
-                    for result_index, extra_dim_index in enumerate(range(*index_subset)):
-                        read_ios.append(((index + (result_index,)), (datasets, m, extra_dim_index)))
+                    # 3D native
+                    index_subset = extra_dims.dim_slice.get(m.extra_dim)
+                    read_ios.append((index, (datasets, m, index_subset)))
                 else:
                     # Get extra_dim index if available
                     extra_dim_index = m.get('extra_dim_index', None)
@@ -826,11 +824,17 @@ def select_datasets_inside_polygon(datasets, polygon):
 
 def fuse_lazy(datasets, geobox, measurement, skip_broken_datasets=False, prepend_dims=0, extra_dim_index=None):
     prepend_shape = (1,) * prepend_dims
-    data = numpy.full(geobox.shape, measurement.nodata, dtype=measurement.dtype)
+
+    if isinstance(extra_dim_index, tuple):
+        extra_dim_shape = (extra_dim_index[1] - extra_dim_index[0],)
+    else:
+        extra_dim_shape = ()
+
+    data = numpy.full(extra_dim_shape + geobox.shape, measurement.nodata, dtype=measurement.dtype)
     _fuse_measurement(data, datasets, geobox, measurement,
                       skip_broken_datasets=skip_broken_datasets,
                       extra_dim_index=extra_dim_index)
-    return data.reshape(prepend_shape + geobox.shape)
+    return data.reshape(prepend_shape + extra_dim_shape + geobox.shape)
 
 
 def _fuse_measurement(dest, datasets, geobox, measurement,
@@ -882,8 +886,8 @@ def _calculate_chunk_sizes(sources: xarray.DataArray,
     chunk_maxsz = dict((dim, sz) for dim, sz in zip(sources.dims + extra_dim_names + geobox.dimensions,
                                                     sources.shape + extra_dim_shapes + geobox.shape))
 
-    # defaults: 1 for non-spatial, whole dimension for Y/X
-    chunk_defaults = dict([(dim, 1) for dim in sources.dims] + [(dim, 1) for dim in extra_dim_names]
+    # defaults: 1 for non-spatial T, whole dimension for Z/Y/X
+    chunk_defaults = dict([(dim, 1) for dim in sources.dims] + [(dim, -1) for dim in extra_dim_names]
                           + [(dim, -1) for dim in geobox.dimensions])
 
     def _resolve(k, v: Optional[Union[str, int]]) -> int:
@@ -922,8 +926,11 @@ def _make_dask_array(chunked_srcs,
 
     token = uuid.uuid4().hex
     dsk_name = 'dc_load_{name}-{token}'.format(name=measurement.name, token=token)
+    z_chunks = ()
 
     needed_irr_chunks, grid_chunks = chunks[:-2], chunks[-2:]
+    if 'extra_dim' in measurement:
+        needed_irr_chunks, z_chunks = needed_irr_chunks[:-1], needed_irr_chunks[-1:]
     actual_irr_chunks = (1,) * len(needed_irr_chunks)
 
     # we can have up to 4 empty chunk shapes: whole, right edge, bottom edge and
@@ -937,44 +944,56 @@ def _make_dask_array(chunked_srcs,
         if name is not None:
             return name
 
-        name = 'empty_{}x{}-{token}'.format(*shape, token=token)
+        # Make this generic to shares of varying length.
+        name = f"empty_{{}}{'x{}'*(len(shape)-1)}-{token}".format(*shape, token=token)
         dsk[name] = (numpy.full, actual_irr_chunks + shape, measurement.nodata, measurement.dtype)
         empties[shape] = name
 
         return name
 
-    for irr_index, tiled_dss in numpy.ndenumerate(chunked_srcs.values):
-        key_prefix = (dsk_name, *irr_index)
+    zidx = []
+    # move into extra dims class
+    if 'extra_dim' in measurement:
+        index_subset = extra_dims.measurements_index(measurement.extra_dim)
+        zidx = list(extra_dims.dask_indices(index_subset[0], index_subset[1], z_chunks[0]))
 
-        # all spatial chunks
-        for idx in numpy.ndindex(gbt.shape):
-            dss = tiled_dss.get(idx, None)
+    if 'extra_dim' in measurement:
+        # Loop through time
+        for irr_index, tiled_dss in numpy.ndenumerate(chunked_srcs.values):
+            key_prefix = (dsk_name, *irr_index)
+            for z_idx, (z_slice, z_size) in enumerate(zidx):
+                # all spatial chunks
+                for idx in numpy.ndindex(gbt.shape):
+                    dss = tiled_dss.get(idx, None)
 
-            if dss is None:
-                val = _mk_empty(gbt.chunk_shape(idx))
-                # 3D case
-                if 'extra_dim' in measurement:
-                    index_subset = extra_dims.measurements_index(measurement.extra_dim)
-                    for result_index, extra_dim_index in numpy.ndenumerate(range(*index_subset)):
-                        dsk[key_prefix + result_index + idx] = val
+                    if dss is None:
+                        dsk[key_prefix + (z_idx,) + idx] = _mk_empty((z_size,) + gbt.chunk_shape(idx))
+                    else:
+                        val = (fuse_lazy,
+                               [_tokenize_dataset(ds) for ds in dss],
+                               gbt[idx],
+                               measurement,
+                               skip_broken_datasets,
+                               len(needed_irr_chunks))
+
+                        dsk[key_prefix + (z_idx,) + idx] = val + (z_slice,)
+    else:
+        for irr_index, tiled_dss in numpy.ndenumerate(chunked_srcs.values):
+            key_prefix = (dsk_name, *irr_index)
+            # all spatial chunks
+            for idx in numpy.ndindex(gbt.shape):
+                dss = tiled_dss.get(idx, None)
+
+                if dss is None:
+                    dsk[key_prefix + idx] = _mk_empty(gbt.chunk_shape(idx))
                 else:
-                    dsk[key_prefix + idx] = val
-            else:
-                val = (fuse_lazy,
-                       [_tokenize_dataset(ds) for ds in dss],
-                       gbt[idx],
-                       measurement,
-                       skip_broken_datasets,
-                       len(needed_irr_chunks))
+                    val = (fuse_lazy,
+                           [_tokenize_dataset(ds) for ds in dss],
+                           gbt[idx],
+                           measurement,
+                           skip_broken_datasets,
+                           len(needed_irr_chunks))
 
-                # 3D case
-                if 'extra_dim' in measurement:
-                    # Do extra_dim subsetting here
-                    index_subset = extra_dims.measurements_index(measurement.extra_dim)
-                    for result_index, extra_dim_index in enumerate(range(*index_subset)):
-                        dsk[key_prefix + (result_index,) + idx] = val + (extra_dim_index,)
-                else:
-                    # Get extra_dim index if available
                     extra_dim_index = measurement.get('extra_dim_index', None)
                     dsk[key_prefix + idx] = val + (extra_dim_index,)
 
@@ -983,13 +1002,15 @@ def _make_dask_array(chunked_srcs,
 
     y_shapes[-1], x_shapes[-1] = gbt.chunk_shape(tuple(n-1 for n in gbt.shape))
 
+    z_chunks = ()
     extra_dim_shape = ()
     if 'extra_dim' in measurement:
         dim_name = measurement.extra_dim
         extra_dim_shape += (len(extra_dims.measurements_values(dim_name)),)
+        z_chunks = (tuple([a[1] for a in zidx]),)
 
     data = da.Array(dsk, dsk_name,
-                    chunks=actual_irr_chunks + (tuple(y_shapes), tuple(x_shapes)),
+                    chunks=actual_irr_chunks + z_chunks + (tuple(y_shapes), tuple(x_shapes)),
                     dtype=measurement.dtype,
                     shape=(chunked_srcs.shape + extra_dim_shape + gbt.base.shape))
 

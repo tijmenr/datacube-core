@@ -21,7 +21,7 @@ numpy>=1.22.2
 psycopg2
 pycodestyle
 pylint
-pyproj>=2.5
+pyproj==3.3.0
 python-dateutil
 pyyaml
 rasterio>=1.2.4
@@ -35,8 +35,11 @@ sqlalchemy
 toolz
 xarray>=0.18
 
+# Lastest owslib (0.26.0) requires pyproj<3.3
+owslib==0.25.0
+
 # pytest
-pytest==6.1.2
+pytest==6.2.5
 pytest-cov==2.10.1
 hypothesis>=6
 pytest-httpserver
@@ -52,3 +55,6 @@ setuptools_scm>=3.4
 toml
 wheel
 twine
+
+# Pin cf-units for Ubuntu 22.04
+cf-units==3.0.1

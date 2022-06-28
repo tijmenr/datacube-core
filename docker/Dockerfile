@@ -4,12 +4,17 @@
 ## Copyright (c) 2015-2020 ODC Contributors
 ## SPDX-License-Identifier: Apache-2.0
 ##
-ARG V_PG=12
-FROM osgeo/gdal:ubuntu-small-3.4.1
+ARG V_PG=14
+FROM osgeo/gdal:ubuntu-small-latest
 
 # Update and install Ubuntu packages
 
 USER root
+
+# Notes:
+#       Install numpy and rasterio from pip - shouldn't be necessary, further investigation required
+#       python3-cfgrib installs a prebuilt cfunits - cfunits does not install in Python3.10 as of version 3.0.1.post0
+#       pyproj works for me in venv with no-binary - but is failing in Docker for some reason
 RUN apt-get update -y \
     && DEBIAN_FRONTEND=noninteractive apt-get upgrade -y \
     && DEBIAN_FRONTEND=noninteractive apt-get dist-upgrade -y \
@@ -17,6 +22,7 @@ RUN apt-get update -y \
         git \
         libpq-dev libudunits2-dev \
         python3-dev python3-distutils python3-pip \
+        python3-numpy python3-rasterio python3-pyproj \
         build-essential \
         postgresql \
         redis-server \
@@ -34,7 +40,16 @@ ENV LC_ALL C.UTF-8
 COPY docker/constraints.in /conf/requirements.txt
 COPY docker/constraints.txt docker/nobinary.txt /conf/
 
+RUN python3 -m pip install --upgrade pip
 
+# Pre-release version of Cython required for some packages to build and install correctly
+RUN python3 -m pip install cython==3.0.0.a10
+# Pyproj requires a no-binary install
+# RUN python3 -m pip install --no-use-pep517 --no-binary ':all:' pyproj
+
+RUN python3 -m pip list
+
+# Rest can install safely from constraints.txt
 RUN python3 -m pip install \
        -r /conf/requirements.txt \
        -c /conf/constraints.txt
@@ -45,6 +60,8 @@ COPY . /code
 RUN python3 -m pip install '/code/[all]' \
     && python3 -m pip install /code/examples/io_plugin \
     && python3 -m pip install /code/tests/drivers/fail_drivers
+
+RUN python3 -m pip list
 
 # Copy bootstrap script into image.
 COPY docker/assets/with_bootstrap /usr/local/bin/

@@ -21,6 +21,7 @@ numpy>=1.22.2
 psycopg2
 pycodestyle
 pylint
+# Version installed by Unbuntu
 pyproj==3.3.0
 python-dateutil
 pyyaml

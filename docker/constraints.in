@@ -1,3 +1,6 @@
+# New cython required to build pyproj, numpy and rasterio successfully
+cython>=0.29.27
+
 # datacube dependencies
 Sphinx
 affine
@@ -25,6 +28,7 @@ pylint
 pyproj==3.3.0
 python-dateutil
 pyyaml
+# Rasterio 1.2.x doesn't install in Python 3.10
 rasterio>=1.2.4
 recommonmark
 redis

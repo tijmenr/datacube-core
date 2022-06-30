@@ -97,6 +97,8 @@ cryptography==37.0.2
     #   secretstorage
 cycler==0.11.0
     # via matplotlib
+cython==0.29.27
+    # via -r constraints.in
 dask==2022.6.1
     # via
     #   -r constraints.in

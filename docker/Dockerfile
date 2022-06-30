@@ -20,9 +20,9 @@ RUN apt-get update -y \
     && DEBIAN_FRONTEND=noninteractive apt-get dist-upgrade -y \
     && DEBIAN_FRONTEND=noninteractive apt-get install -y --allow-change-held-packages --fix-missing --no-install-recommends \
         git \
-        libpq-dev libudunits2-dev \
+        libpq-dev libudunits2-dev libproj-dev \
         python3-dev python3-distutils python3-pip \
-        python3-numpy python3-rasterio python3-pyproj \
+        python3-numpy python3-rasterio \
         build-essential \
         postgresql \
         redis-server \
@@ -43,9 +43,9 @@ COPY docker/constraints.txt docker/nobinary.txt /conf/
 RUN python3 -m pip install --upgrade pip
 
 # Pre-release version of Cython required for some packages to build and install correctly
-RUN python3 -m pip install cython==3.0.0.a10
+RUN python3 -m pip install cython==0.29.27
 # Pyproj requires a no-binary install
-# RUN python3 -m pip install --no-use-pep517 --no-binary ':all:' pyproj
+RUN python3 -m pip install --no-use-pep517 --no-binary ':all:' pyproj==3.3.0
 
 RUN python3 -m pip list
 

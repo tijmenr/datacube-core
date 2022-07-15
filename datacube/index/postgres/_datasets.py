@@ -171,13 +171,13 @@ class DatasetResource(AbstractDatasetResource):
             present = {k: v for k, v in zip(all_uuids, self.bulk_has(all_uuids))}
 
             if present[dataset.id]:
-                _LOG.warning('Dataset %s is already in the database', dataset.id)
+                _LOG.warning(f"Dataset {dataset.id} is already in the database")
                 return dataset
 
             dss = [ds for ds in [dss[0] for dss in ds_by_uuid.values()] if not present[ds.id]]
         else:
             if self.has(dataset.id):
-                _LOG.warning('Dataset %s is already in the database', dataset.id)
+                _LOG.warning(f"Dataset {dataset.id} is already in the database")
                 return dataset
 
             dss = [dataset]

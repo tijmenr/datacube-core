@@ -86,7 +86,7 @@ class DatasetResource(AbstractDatasetResource):
                 self.persist_source_relationship(dataset, src, classifier)
         else:
             if self.has(dataset.id):
-                _LOG.warning("Dataset %s is already in the database", dataset.id)
+                _LOG.warning(f"Dataset {dataset.id} is already in the database")
                 return dataset
             persistable = self.clone(dataset, for_save=True)
             self.by_id[persistable.id] = persistable

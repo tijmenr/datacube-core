@@ -10,6 +10,7 @@
 from affine import Affine
 from functools import reduce
 from typing import Dict, Any, Iterable, Optional, Tuple
+from uuid import UUID
 
 from datacube.utils.geometry import (
     SomeCRS,

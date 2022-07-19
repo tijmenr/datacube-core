@@ -164,13 +164,13 @@ def dataset_resolver(index: AbstractIndex,
         except InvalidDocException as e:
             return None, e
 
-        main_uuid = main_ds.id
+        main_uuid = str(main_ds.id)
 
         if not main_uuid:
             return None, "No id defined in dataset doc"
 
         ds_by_uuid = toolz.valmap(toolz.first, flatten_datasets(main_ds))
-        all_uuid = list(ds_by_uuid)
+        all_uuid = [str(u) for u in ds_by_uuid]
         db_dss = {str(ds.id): ds for ds in index.datasets.bulk_get(all_uuid)}
 
         lineage_uuids = set(filter(lambda x: x != main_uuid, all_uuid))
@@ -201,28 +201,29 @@ def dataset_resolver(index: AbstractIndex,
                                              for uuid, err in bad_lineage)
                     return None, error_report
 
-        def with_cache(v: Dataset, k: UUID, cache: MutableMapping[UUID, Dataset]) -> Dataset:
+        def with_cache(v: Dataset, k: str, cache: MutableMapping[str, Dataset]) -> Dataset:
             cache[k] = v
             return v
 
         def resolve_ds(ds: SimpleDocNav,
                        sources: Optional[Mapping[str, Dataset]],
-                       cache: MutableMapping[UUID, Dataset]) -> Dataset:
-            cached = cache.get(ds.id)
+                       cache: MutableMapping[str, Dataset]) -> Dataset:
+            ds_id = str(ds.id)
+            cached = cache.get(ds_id)
             if cached is not None:
                 return cached
 
-            uris = [uri] if ds.id == main_uuid else []
+            uris = [uri] if ds_id == main_uuid else []
 
             doc = ds.doc
 
-            db_ds = db_dss.get(ds.id)
+            db_ds = db_dss.get(ds_id)
             if db_ds:
                 product = db_ds.type
             else:
                 product = match_product(doc)
 
-            return with_cache(Dataset(product, doc, uris=uris, sources=sources), ds.id, cache)
+            return with_cache(Dataset(product, doc, uris=uris, sources=sources), ds_id, cache)
         try:
             return remap_lineage_doc(main_ds, resolve_ds, cache={}), None
         except BadMatch as e:

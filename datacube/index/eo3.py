@@ -228,11 +228,11 @@ def prep_eo3(doc: Dict[str, Any],
         if isinstance(uuids, dict) or isinstance(uuids[0], dict):
             raise ValueError("Embedded lineage not supported for eo3 metadata types")
         if len(uuids) == 1:
-            return {name: {'id': uuids[0]}}
+            return {name: {'id': str(uuids[0])}}
 
         out = {}
         for idx, uuid in enumerate(uuids, start=1):
-            out[name+str(idx)] = {'id': uuid}
+            out[name+str(idx)] = {'id': str(uuid)}
         return out
 
     sources = {}

@@ -12,6 +12,7 @@ from pathlib import Path
 from collections import OrderedDict
 from types import SimpleNamespace
 from typing import Tuple, Iterable
+from uuid import UUID
 
 import numpy as np
 import pytest
@@ -237,7 +238,7 @@ def test_dataset_maker():
 
     assert a.id != b.id
     assert a.doc['creation_dt'] == b.doc['creation_dt']
-    assert isinstance(a.id, str)
+    assert isinstance(a.id, UUID)
     assert a.sources == {}
 
     a1, a2 = [dataset_maker(i)('A', product_type='eo') for i in (0, 1)]

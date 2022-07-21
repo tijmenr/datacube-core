@@ -519,7 +519,8 @@ def test_dataset_archive_dry_run(dataset_add_configs, index_empty, clirunner):
 
     # Multiple Valid UUIDs
     # Not archived in the database and are shown in output
-    multiple_valid_uuid = clirunner(['dataset', 'archive', '--dry-run',
+    multiple_valid_uuid = clirunner([
+        'dataset', 'archive', '--dry-run',
         str(ds.sources['ae'].id), str(ds.sources['ab'].id)])
     assert str(ds.sources['ae'].id) in multiple_valid_uuid.output
     assert str(ds.sources['ab'].id) in multiple_valid_uuid.output

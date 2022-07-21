@@ -7,9 +7,11 @@
 # TODO: typehints need attention
 """ Tools for working with EO3 metadata
 """
+from re import U
 from affine import Affine
 from functools import reduce
-from typing import Dict, Any, Iterable, Optional, Tuple
+from typing import Dict, Any, Iterable, Optional, Tuple, Union
+from uuid import UUID
 
 from datacube.utils.geometry import (
     SomeCRS,
@@ -217,6 +219,11 @@ def prep_eo3(doc: Dict[str, Any],
         if not is_doc_eo3(doc):
             return doc
 
+    def stringify(u: Optional[Union[str, UUID]]) -> Optional[str]:
+        return u if isinstance(u, str) else str(u) if u else None
+
+    doc['id'] = stringify(doc.get('id', None))
+    
     doc = add_eo3_parts(doc, resolution=resolution)
     lineage = doc.pop('lineage', {})
 
@@ -228,11 +235,11 @@ def prep_eo3(doc: Dict[str, Any],
         if isinstance(uuids, dict) or isinstance(uuids[0], dict):
             raise ValueError("Embedded lineage not supported for eo3 metadata types")
         if len(uuids) == 1:
-            return {name: {'id': uuids[0]}}
+            return {name: {'id': stringify(uuids[0])}}
 
         out = {}
         for idx, uuid in enumerate(uuids, start=1):
-            out[name+str(idx)] = {'id': uuid}
+            out[name+str(idx)] = {'id': stringify(uuid)}
         return out
 
     sources = {}

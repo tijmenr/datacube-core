@@ -7,7 +7,6 @@ import math
 import pytest
 import toolz
 import yaml
-from uuid import UUID
 
 from datacube.index import Index
 from datacube.index.hl import Doc2Dataset
@@ -520,7 +519,8 @@ def test_dataset_archive_dry_run(dataset_add_configs, index_empty, clirunner):
 
     # Multiple Valid UUIDs
     # Not archived in the database and are shown in output
-    multiple_valid_uuid = clirunner(['dataset', 'archive', '--dry-run', str(ds.sources['ae'].id), str(ds.sources['ab'].id)])
+    multiple_valid_uuid = clirunner(['dataset', 'archive', '--dry-run',
+        str(ds.sources['ae'].id), str(ds.sources['ab'].id)])
     assert str(ds.sources['ae'].id) in multiple_valid_uuid.output
     assert str(ds.sources['ab'].id) in multiple_valid_uuid.output
     assert index.datasets.has(ds.sources['ae'].id) is True

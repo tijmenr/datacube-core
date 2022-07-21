@@ -5,7 +5,6 @@
 import datetime
 
 import pytest
-from uuid import UUID
 from datacube.testutils import gen_dataset_test_dag
 
 from datacube.utils import InvalidDocException, read_documents, SimpleDocNav
@@ -551,5 +550,5 @@ def test_memory_dataset_add(dataset_add_configs, mem_index_fresh):
     ds_ = SimpleDocNav(gen_dataset_test_dag(1, force_tree=True))
     assert ds_.id in ds_ids
     ds_from_idx = idx.datasets.get(ds_.id, include_sources=True)
-    assert str(ds_from_idx.sources['ab'].id) == ds_.sources['ab'].id
-    assert str(ds_from_idx.sources['ac'].sources["cd"].id) == ds_.sources['ac'].sources['cd'].id
+    assert ds_from_idx.sources['ab'].id == ds_.sources['ab'].id
+    assert ds_from_idx.sources['ac'].sources["cd"].id == ds_.sources['ac'].sources['cd'].id

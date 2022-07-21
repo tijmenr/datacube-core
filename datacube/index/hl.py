@@ -177,7 +177,7 @@ def dataset_resolver(index: AbstractIndex,
         missing_lineage = lineage_uuids - set(db_dss)
 
         if missing_lineage and fail_on_missing_lineage:
-            return None, "Following lineage datasets are missing from DB: %s" % (','.join(missing_lineage))
+            return None, "Following lineage datasets are missing from DB: %s" % (','.join(str(m) for m in missing_lineage))
 
         if not is_doc_eo3(main_ds.doc):
             if is_doc_geo(main_ds.doc, check_eo3=False):

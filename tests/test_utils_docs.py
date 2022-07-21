@@ -391,7 +391,7 @@ A:..:0
 
     assert [set(nu_map[n] for n in s)
             for s in ('A', 'BCE', 'CD', 'D')
-           ] == [to_set(xx) for xx in dg]
+            ] == [to_set(xx) for xx in dg]
 
     with pytest.raises(ValueError):
         SimpleDocNav([])

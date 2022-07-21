@@ -12,7 +12,7 @@ from pathlib import Path
 from collections import OrderedDict
 from types import SimpleNamespace
 from typing import Tuple, Iterable
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import numpy as np
 import pytest
@@ -322,7 +322,7 @@ def test_simple_doc_nav():
       +--> E
     """
 
-    nu_map = {n: uuid4() for k in ['A', 'B', 'C', 'D', 'E']}
+    nu_map = {n: uuid4() for n in ['A', 'B', 'C', 'D', 'E']}
     un_map = {u: n for n, u in nu_map.items()}
 
     def node(name, **kwargs):
@@ -389,10 +389,9 @@ A:..:0
     def to_set(xx):
         return set(x.id for x in xx)
 
-    assert [set(nu_map[n] for n in s) for s in ('A',
-                             'BCE',
-                             'CD',
-                             'D')] == [to_set(xx) for xx in dg]
+    assert [set(nu_map[n] for n in s)
+            for s in ('A', 'BCE', 'CD', 'D')
+        ] == [to_set(xx) for xx in dg]
 
     with pytest.raises(ValueError):
         SimpleDocNav([])

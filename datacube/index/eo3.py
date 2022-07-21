@@ -7,7 +7,6 @@
 # TODO: typehints need attention
 """ Tools for working with EO3 metadata
 """
-from re import U
 from affine import Affine
 from functools import reduce
 from typing import Dict, Any, Iterable, Optional, Tuple, Union
@@ -223,7 +222,7 @@ def prep_eo3(doc: Dict[str, Any],
         return u if isinstance(u, str) else str(u) if u else None
 
     doc['id'] = stringify(doc.get('id', None))
-    
+
     doc = add_eo3_parts(doc, resolution=resolution)
     lineage = doc.pop('lineage', {})
 
